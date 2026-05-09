@@ -2,9 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\Auth\CustomerRegistered;
-use App\Events\Auth\AdminRegistered;
-use App\Events\Auth\ProfileCreated;
 use App\Models\User;
 use App\Repositories\Interfaces\AuthRepositoryInterface;
 use Illuminate\Auth\Events\Registered;
@@ -26,7 +23,8 @@ class AuthService
     }
 
     /**
-     * Authenticate user with credentials.
+     * Authenticate user with credentials using Sanctum.
+     * This method validates credentials and creates API token.
      *
      * @param string $email
      * @param string $password
@@ -38,7 +36,10 @@ class AuthService
     {
         $this->ensureIsNotRateLimited($email);
 
-        if (!Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
+        // Find user by email
+        $user = $this->authRepository->findByEmail($email);
+        
+        if (!$user || !Hash::check($password, $user->password)) {
             RateLimiter::hit($this->throttleKey($email));
 
             throw ValidationException::withMessages([
@@ -48,7 +49,7 @@ class AuthService
 
         RateLimiter::clear($this->throttleKey($email));
 
-        $user = Auth::user();
+        // Create Sanctum token
         $token = $user->createToken('api-token')->plainTextToken;
 
         return [
@@ -59,7 +60,7 @@ class AuthService
     }
 
     /**
-     * Register a new customer with profile.
+     * Register a new customer with profile and cart.
      *
      * @param array $userData
      * @return array
@@ -74,6 +75,9 @@ class AuthService
             if (isset($userData['profile'])) {
                 $user->profile()->create($userData['profile']);
             }
+            
+            // Create cart for customer
+            $user->profile->cart()->create();
             
             // Fire registration event
             event(new Registered($user));

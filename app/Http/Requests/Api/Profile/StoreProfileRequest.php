@@ -12,7 +12,10 @@ class StoreProfileRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $user = auth()->user();
+        
+        // Only super administrators can create profiles
+        return $user && $user->hasRole('super_administrator');
     }
 
     /**
@@ -23,7 +26,18 @@ class StoreProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'user_id' => [
+                'required', 
+                'integer', 
+                'exists:users,id', 
+                'unique:profiles,user_id',
+                function ($attribute, $value, $fail) {
+                    $user = \App\Models\User::find($value);
+                    if (!$user || !$user->hasRole('customer')) {
+                        $fail('The selected user must have the customer role.');
+                    }
+                }
+            ],
             'phone' => ['required', 'string', 'max:20'],
             'address' => ['required', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
