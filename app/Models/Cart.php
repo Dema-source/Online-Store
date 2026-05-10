@@ -30,6 +30,17 @@ class Cart extends Model
         'profile_id',
     ];
 
+        /**
+     * The "booted" method of the model.
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($cart) {
+            // Delete cart items when cart is deleted
+            $cart->cart_items()->delete();
+        });
+    }
+
     /**
      * Get the profile that owns the Cart
      *

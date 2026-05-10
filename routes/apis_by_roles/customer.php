@@ -79,9 +79,9 @@
   */
   // API: {{baseURL}}/api/customer/cart-items
   Route::get('cart-items/index', [CartItemController::class, 'indexForCustomer']);
-  Route::put('cart-items', [CartItemController::class, 'updateCartItemForCustomer']);
+  Route::put('cart-items/update', [CartItemController::class, 'updateCartItemForCustomer']);
+  Route::post('cart-items/store', [CartItemController::class, 'storeForCustomer']);
+  Route::post('cart-items/clear-cart', [CartItemController::class, 'clearMyCart']);
   Route::post('cart-items/check-products', [CartItemController::class, 'checkProductsInMyCart']);
-  Route::get('cart-items/get-total/{cart_id}', [CartItemController::class, 'getMyCartTotal']);
+  Route::get('cart-items/get-total', [CartItemController::class, 'getMyCartTotal']);
   Route::get('cart-items/get-count', [CartItemController::class, 'getMyCartItemsCount']);
-  Route::post('cart-items/clear-cart/{cart_id}', [CartItemController::class, 'clearMyCart']);
-  Route::apiResource('cart-items', CartItemController::class)->except(['index', 'show','update']);

@@ -22,7 +22,7 @@ class EnsureGuestToken
         }
 
         // Check for guest token
-        if (!$request->header('Guest-Token')) {
+        if (!$request->header('X-Guest-Token')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Guest token is required'

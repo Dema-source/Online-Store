@@ -49,6 +49,25 @@ class Product extends Model
         'description'
     ];
 
+    
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($product) {
+            // Delete product-category relationships
+            $product->categories()->detach();
+            
+            // Delete cart items (this will be handled by cascade delete from cart_items table)
+            // But we'll also do it explicitly for safety
+            $product->cart_items()->delete();
+            
+            // Delete product images
+            $product->images()->delete();
+        });
+    }
+    
     /**
      * The categories that could contain the product
      *

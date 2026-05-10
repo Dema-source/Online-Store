@@ -23,10 +23,16 @@ class CheckProductsInCartRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'cart_id' => ['required', 'integer', 'exists:carts,id'],
+        $rules = [
             'product_ids' => ['required', 'array', 'min:1'],
             'product_ids.*' => ['required', 'integer', 'exists:products,id']
         ];
+        // Only require cart_id for admin users
+        $user = $this->user();
+        if ($user && $user->hasRole('super_administrator')) {
+            $rules['cart_id'] = ['required', 'integer', 'exists:carts,id'];
+        }
+
+        return $rules;
     }
 }

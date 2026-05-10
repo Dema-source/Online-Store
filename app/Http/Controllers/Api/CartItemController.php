@@ -25,6 +25,7 @@ class CartItemController extends Controller
         protected \App\Repositories\Interfaces\CartItemRepositoryInterface $repository
     ) {}
 
+     // For Admin
     /**
      * Display a paginated listing of CartItems.
      *
@@ -49,45 +50,7 @@ class CartItemController extends Controller
      */
     public function store(StoreCartItemRequest $request): JsonResponse
     {
-        $user = auth()->user();
-
-        if ($user->hasRole('super_administrator')) {
-            return $this->storeForAdmin($request);
-        } else {
-            return $this->storeForCustomer($request);
-        }
-    }
-
-    /**
-     * Store a newly created CartItem in storage (Admin).
-     *
-     * @param StoreCartItemRequest $request The validated form request.
-     * @return JsonResponse
-     */
-    public function storeForAdmin(StoreCartItemRequest $request): JsonResponse
-    {
         $item = $this->service->create($request->validated());
-
-        return $this->success(new CartItemResource($item), 'CartItem created successfully');
-    }
-
-    /**
-     * Store a newly created CartItem in storage (Customer).
-     *
-     * @param StoreCartItemRequest $request The validated form request.
-     * @return JsonResponse
-     */
-    public function storeForCustomer(StoreCartItemRequest $request): JsonResponse
-    {
-        $data = $request->validated();
-        $cartId = auth()->user()->profile->cart->id ?? null;
-
-        if (!$cartId) {
-            return $this->error('You do not have an active cart. Please create a cart first.', 404);
-        }
-
-        $data['cart_id'] = $cartId;
-        $item = $this->service->create($data);
 
         return $this->success(new CartItemResource($item), 'CartItem created successfully');
     }
@@ -114,46 +77,6 @@ class CartItemController extends Controller
      */
     public function update(UpdateCartItemRequest $request, int|string $id): JsonResponse
     {
-        $user = auth()->user();
-
-        if ($user->hasRole('super_administrator')) {
-            return $this->updateForAdmin($request, $id);
-        } else {
-            return $this->updateForCustomer($request, $id);
-        }
-    }
-
-    /**
-     * Update a specified CartItem in storage (Admin).
-     *
-     * @param UpdateCartItemRequest $request Validated input data.
-     * @param int|string $id The primary key value.
-     * @return JsonResponse
-     */
-    public function updateForAdmin(UpdateCartItemRequest $request, int|string $id): JsonResponse
-    {
-        $item = $this->service->update($id, $request->validated());
-
-        return $this->success(new CartItemResource($item), 'CartItem updated successfully');
-    }
-
-    /**
-     * Update a specified CartItem in storage (Customer).
-     *
-     * @param UpdateCartItemRequest $request Validated input data.
-     * @param int|string $id The primary key value.
-     * @return JsonResponse
-     */
-    public function updateForCustomer(UpdateCartItemRequest $request, int|string $id): JsonResponse
-    {
-        // Get the cart item to verify ownership
-        $cartItem = $this->repository->findById($id);
-
-        // Check if the cart belongs to the authenticated user
-        if ($cartItem && $cartItem->cart->user_id !== auth()->user()->id) {
-            return $this->error('You can only update items in your own cart.', 403);
-        }
-
         $item = $this->service->update($id, $request->validated());
 
         return $this->success(new CartItemResource($item), 'CartItem updated successfully');
@@ -167,44 +90,6 @@ class CartItemController extends Controller
      */
     public function destroy(int|string $id): JsonResponse
     {
-        $user = auth()->user();
-
-        if ($user->hasRole('super_administrator')) {
-            return $this->destroyForAdmin($id);
-        } else {
-            return $this->destroyForCustomer($id);
-        }
-    }
-
-    /**
-     * Remove specified CartItem from storage (Admin).
-     *
-     * @param int|string $id The primary key value.
-     * @return JsonResponse
-     */
-    public function destroyForAdmin(int|string $id): JsonResponse
-    {
-        $this->service->delete($id);
-
-        return $this->success(null, 'CartItem deleted successfully');
-    }
-
-    /**
-     * Remove specified CartItem from storage (Customer).
-     *
-     * @param int|string $id The primary key value.
-     * @return JsonResponse
-     */
-    public function destroyForCustomer(int|string $id): JsonResponse
-    {
-        // Get the cart item to verify ownership
-        $cartItem = $this->repository->findById($id);
-
-        // Check if the cart belongs to the authenticated user
-        if ($cartItem && $cartItem->cart->user_id !== auth()->user()->id) {
-            return $this->error('You can only delete items from your own cart.', 403);
-        }
-
         $this->service->delete($id);
 
         return $this->success(null, 'CartItem deleted successfully');
@@ -224,25 +109,6 @@ class CartItemController extends Controller
     }
 
     /**
-     * Clear all items from customer's own cart.
-     *
-     * @return JsonResponse
-     */
-    public function clearMyCart(): JsonResponse
-    {
-        // Get customer's cart ID from authenticated user
-        $cartId = auth()->user()->cart->id ?? null;
-
-        if (!$cartId) {
-            return $this->error('You do not have an active cart.', 404);
-        }
-
-        $deletedCount = $this->service->clearCart($cartId);
-
-        return $this->success(['deleted_count' => $deletedCount], 'Your cart cleared successfully');
-    }
-
-    /**
      * Get cart total value (Admin).
      *
      * @param int|string $cartId The cart ID.
@@ -256,25 +122,6 @@ class CartItemController extends Controller
     }
 
     /**
-     * Get customer's cart total value.
-     *
-     * @return JsonResponse
-     */
-    public function getMyCartTotal(): JsonResponse
-    {
-        // Get customer's cart ID from authenticated user
-        $cartId = auth()->user()->cart->id ?? null;
-
-        if (!$cartId) {
-            return $this->error('You do not have an active cart.', 404);
-        }
-
-        $total = $this->service->getCartTotal($cartId);
-
-        return $this->success(['cart_total' => $total], 'Your cart total retrieved successfully');
-    }
-
-    /**
      * Get cart items count.
      *
      * @param int|string $cartId The cart ID.
@@ -283,7 +130,7 @@ class CartItemController extends Controller
     public function getCartItemsCount(int|string $cartId): JsonResponse
     {
         $count = $this->service->getCartItemsCount($cartId);
-        
+
         return $this->success(['items_count' => $count], 'Cart items count retrieved successfully');
     }
 
@@ -304,45 +151,7 @@ class CartItemController extends Controller
         return $this->success($existingItems, 'Products check completed successfully');
     }
 
-    /**
-     * Check if products are in customer's cart.
-     *
-     * @param CheckProductsInCartRequest $request
-     * @return JsonResponse
-     */
-    public function checkProductsInMyCart(CheckProductsInCartRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $cartId = auth()->user()->cart->id ?? null;
-        $productIds = $validated['product_ids'];
-
-        if (!$cartId) {
-            return $this->error('User cart not found', 404);
-        }
-
-        $existingItems = $this->service->checkProductsInCart($cartId, $productIds);
-
-        return $this->success($existingItems, 'Products check completed successfully');
-    }
-
-    /**
-     * Get customer's cart items count.
-     *
-     * @return JsonResponse
-     */
-    public function getMyCartItemsCount(): JsonResponse
-    {
-        $cartId = auth()->user()->cart->id ?? null;
-
-        if (!$cartId) {
-            return $this->error('User cart not found', 404);
-        }
-
-        $count = $this->service->getCartItemsCount($cartId);
-
-        return $this->success(['items_count' => $count], 'Cart items count retrieved successfully');
-    }
-
+    // For Customer
     /**
      * Display customer's cart items.
      *
@@ -351,14 +160,35 @@ class CartItemController extends Controller
     public function indexForCustomer(): JsonResponse
     {
         $cartId = auth()->user()->profile->cart->id ?? null;
-        
+
         if (!$cartId) {
             return $this->error('Cart not found', 404);
         }
-        
+
         $items = $this->service->getByCartId($cartId);
-        
+
         return $this->success(CartItemResource::collection($items), 'Cart items retrieved successfully');
+    }
+
+    /**
+     * Store a newly created CartItem in storage (Customer).
+     *
+     * @param StoreCartItemRequest $request The validated form request.
+     * @return JsonResponse
+     */
+    public function storeForCustomer(StoreCartItemRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $cartId = auth()->user()->profile->cart->id ?? null;
+
+        if (!$cartId) {
+            return $this->error('You do not have an active cart. Please create a cart first.', 404);
+        }
+
+        $data['cart_id'] = $cartId;
+        $item = $this->service->create($data);
+
+        return $this->success(new CartItemResource($item), 'CartItem created successfully');
     }
 
     /**
@@ -371,14 +201,14 @@ class CartItemController extends Controller
     {
         $data = $request->validated();
         $cartId = auth()->user()->profile->cart->id ?? null;
-        
+
         if (!$cartId) {
             return $this->error('Cart not found', 404);
         }
 
         // Find the cart item by cart_id and product_id
         $cartItem = $this->repository->findByCartAndProduct($cartId, $data['product_id']);
-        
+
         if (!$cartItem) {
             return $this->error('This product is not in your cart.', 404);
         }
@@ -387,5 +217,82 @@ class CartItemController extends Controller
         $item = $this->service->update($cartItem->id, ['quantity' => $data['quantity']]);
 
         return $this->success(new CartItemResource($item), 'CartItem updated successfully');
+    }
+
+    /**
+     * Clear all items from customer's own cart.
+     *
+     * @return JsonResponse
+     */
+    public function clearMyCart(): JsonResponse
+    {
+        // Get customer's cart ID from authenticated user
+        $cartId = auth()->user()->profile->cart->id ?? null;
+
+        if (!$cartId) {
+            return $this->error('You do not have an active cart.', 404);
+        }
+
+        $deletedCount = $this->service->clearCart($cartId);
+
+        return $this->success(['deleted_count' => $deletedCount], 'Your cart cleared successfully');
+    }
+
+    /**
+     * Check if products are in customer's cart.
+     *
+     * @param CheckProductsInCartRequest $request
+     * @return JsonResponse
+     */
+    public function checkProductsInMyCart(CheckProductsInCartRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $cartId = auth()->user()->profile->cart->id ?? null;
+        $productIds = $validated['product_ids'];
+
+        if (!$cartId) {
+            return $this->error('User cart not found', 404);
+        }
+
+        $existingItems = $this->service->checkProductsInCart($cartId, $productIds);
+
+        return $this->success($existingItems, 'Products check completed successfully');
+    }
+
+    /**
+     * Get customer's cart total value.
+     *
+     * @return JsonResponse
+     */
+    public function getMyCartTotal(): JsonResponse
+    {
+        // Get customer's cart ID from authenticated user
+        $cartId = auth()->user()->profile->cart->id ?? null;
+
+        if (!$cartId) {
+            return $this->error('You do not have an active cart.', 404);
+        }
+
+        $total = $this->service->getCartTotal($cartId);
+
+        return $this->success(['cart_total' => $total], 'Your cart total retrieved successfully');
+    }
+
+    /**
+     * Get customer's cart items count.
+     *
+     * @return JsonResponse
+     */
+    public function getMyCartItemsCount(): JsonResponse
+    {
+        $cartId = auth()->user()->profile->cart->id ?? null;
+
+        if (!$cartId) {
+            return $this->error('User cart not found', 404);
+        }
+
+        $count = $this->service->getCartItemsCount($cartId);
+
+        return $this->success(['items_count' => $count], 'Cart items count retrieved successfully');
     }
 }

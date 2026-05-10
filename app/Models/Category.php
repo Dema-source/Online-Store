@@ -38,6 +38,17 @@ class Category extends Model
     public array $translatable = [
         'name'
     ];
+    
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($category) {
+            // Delete product-category relationships
+            $category->products()->detach();
+        });
+    }
 
     /**
      * The products that belong to the Category
