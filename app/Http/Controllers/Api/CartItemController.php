@@ -8,6 +8,7 @@ use App\Http\Requests\Api\CartItem\UpdateCartItemRequest;
 use App\Http\Requests\Api\CartItem\CheckProductsInCartRequest;
 use App\Http\Resources\CartItemResource;
 use App\Services\CartItemService;
+use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,10 +20,12 @@ class CartItemController extends Controller
      *
      * @param CartItemService $service.
      * @param \App\Repositories\Interfaces\CartItemRepositoryInterface $repository
+     * @param InventoryService $inventoryService
      */
     public function __construct(
         protected CartItemService $service,
-        protected \App\Repositories\Interfaces\CartItemRepositoryInterface $repository
+        protected \App\Repositories\Interfaces\CartItemRepositoryInterface $repository,
+        protected InventoryService $inventoryService
     ) {}
 
      // For Admin
@@ -50,7 +53,39 @@ class CartItemController extends Controller
      */
     public function store(StoreCartItemRequest $request): JsonResponse
     {
-        $item = $this->service->create($request->validated());
+        $data = $request->validated();
+
+        // Determine cart ID based on user type
+        $cartId = null;
+        $user = Auth::user();
+        
+        if ($user && $user->hasRole('super_administrator')) {
+            // Admin users provide cart_id in request
+            $cartId = $data['cart_id'] ?? null;
+        } else {
+            // Regular users get their cart from authenticated user
+            $cartId = $user?->profile?->cart?->id ?? null;
+            
+            if (!$cartId) {
+                return $this->error('You do not have an active cart. Please create a cart first.', 404);
+            }
+            
+            // Add cart_id to data for service creation
+            $data['cart_id'] = $cartId;
+        }
+
+        // Check stock availability before creating cart item (considering existing cart items)
+        $isAvailable = $this->inventoryService->checkStockAvailabilityWithCart(
+            $data['product_id'],
+            $data['quantity'],
+            $cartId
+        );
+
+        if (! $isAvailable) {
+            return $this->error('Product is out of stock or insufficient quantity available.', 400);
+        }
+
+        $item = $this->service->create($data);
 
         return $this->success(new CartItemResource($item), 'CartItem created successfully');
     }
@@ -77,7 +112,28 @@ class CartItemController extends Controller
      */
     public function update(UpdateCartItemRequest $request, int|string $id): JsonResponse
     {
-        $item = $this->service->update($id, $request->validated());
+        $data = $request->validated();
+
+        // Get the current cart item to check stock
+        $cartItem = $this->service->findById($id);
+        
+        if (!$cartItem) {
+            return $this->error('CartItem not found', 404);
+        }
+
+        // Check stock availability for new quantity
+        if (isset($data['quantity'])) {
+            $isAvailable = $this->inventoryService->checkStockAvailability(
+                $cartItem->product_id,
+                $data['quantity']
+            );
+
+            if (!$isAvailable) {
+                return $this->error('Product is out of stock or insufficient quantity available.', 400);
+            }
+        }
+
+        $item = $this->service->update($id, $data);
 
         return $this->success(new CartItemResource($item), 'CartItem updated successfully');
     }
@@ -159,7 +215,7 @@ class CartItemController extends Controller
      */
     public function indexForCustomer(): JsonResponse
     {
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('Cart not found', 404);
@@ -179,10 +235,21 @@ class CartItemController extends Controller
     public function storeForCustomer(StoreCartItemRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('You do not have an active cart. Please create a cart first.', 404);
+        }
+
+        // Check stock availability before adding to cart (considering existing cart items)
+        $isAvailable = $this->inventoryService->checkStockAvailabilityWithCart(
+            $data['product_id'],
+            $data['quantity'],
+            $cartId
+        );
+
+        if (! $isAvailable) {
+            return $this->error('Product is out of stock or insufficient quantity available.', 400);
         }
 
         $data['cart_id'] = $cartId;
@@ -200,7 +267,7 @@ class CartItemController extends Controller
     public function updateCartItemForCustomer(UpdateCartItemRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('Cart not found', 404);
@@ -211,6 +278,18 @@ class CartItemController extends Controller
 
         if (!$cartItem) {
             return $this->error('This product is not in your cart.', 404);
+        }
+
+        // Check stock availability for the new quantity
+        if (isset($data['quantity'])) {
+            $isAvailable = $this->inventoryService->checkStockAvailability(
+                $cartItem->product_id,
+                $data['quantity']
+            );
+
+            if (!$isAvailable) {
+                return $this->error('Product is out of stock or insufficient quantity available.', 400);
+            }
         }
 
         // Update the cart item
@@ -227,7 +306,7 @@ class CartItemController extends Controller
     public function clearMyCart(): JsonResponse
     {
         // Get customer's cart ID from authenticated user
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('You do not have an active cart.', 404);
@@ -247,7 +326,7 @@ class CartItemController extends Controller
     public function checkProductsInMyCart(CheckProductsInCartRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
         $productIds = $validated['product_ids'];
 
         if (!$cartId) {
@@ -267,7 +346,7 @@ class CartItemController extends Controller
     public function getMyCartTotal(): JsonResponse
     {
         // Get customer's cart ID from authenticated user
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('You do not have an active cart.', 404);
@@ -285,7 +364,7 @@ class CartItemController extends Controller
      */
     public function getMyCartItemsCount(): JsonResponse
     {
-        $cartId = auth()->user()->profile->cart->id ?? null;
+        $cartId = Auth::user()->profile->cart->id ?? null;
 
         if (!$cartId) {
             return $this->error('User cart not found', 404);
@@ -294,5 +373,32 @@ class CartItemController extends Controller
         $count = $this->service->getCartItemsCount($cartId);
 
         return $this->success(['items_count' => $count], 'Cart items count retrieved successfully');
+    }
+
+    /**
+     * Remove a specific product from customer's cart by product ID.
+     *
+     * @param int $productId The product ID to remove from cart.
+     * @return JsonResponse
+     */
+    public function removeProductFromMyCart(int $productId): JsonResponse
+    {
+        $cartId = Auth::user()->profile->cart->id ?? null;
+
+        if (!$cartId) {
+            return $this->error('You do not have an active cart.', 404);
+        }
+
+        // Find the cart item by cart_id and product_id
+        $cartItem = $this->repository->findByCartAndProduct($cartId, $productId);
+
+        if (!$cartItem) {
+            return $this->error('This product is not in your cart.', 404);
+        }
+
+        // Delete the cart item
+        $this->service->delete($cartItem->id);
+
+        return $this->success(null, 'Product removed from your cart successfully');
     }
 }

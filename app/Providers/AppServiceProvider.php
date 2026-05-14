@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Repositories\Interfaces\PaymentRepositoryInterface;
+use App\Repositories\Eloquent\PaymentRepository;
+use App\Repositories\Interfaces\CheckoutRepositoryInterface;
+use App\Repositories\Eloquent\CheckoutRepository;
+use App\Repositories\Interfaces\InventoryRepositoryInterface;
+use App\Repositories\Eloquent\InventoryRepository;
+use App\Repositories\Interfaces\OrderRepositoryInterface;
+use App\Repositories\Eloquent\OrderRepository;
 use App\Repositories\Interfaces\ProductImageRepositoryInterface;
 use App\Repositories\Eloquent\ProductImageRepository;
 use App\Repositories\Interfaces\ProductRepositoryInterface;
@@ -32,6 +40,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
+        $this->app->bind(CheckoutRepositoryInterface::class, CheckoutRepository::class);
+        $this->app->bind(InventoryRepositoryInterface::class, InventoryRepository::class);
+        $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
         $this->app->bind(ProductImageRepositoryInterface::class, ProductImageRepository::class);
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
         $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
@@ -50,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
+            return config('app.frontend_url') . "/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
         });
     }
 }

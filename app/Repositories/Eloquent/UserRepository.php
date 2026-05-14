@@ -192,7 +192,7 @@ class UserRepository implements UserRepositoryInterface
     /**
      * Get users by multiple IDs.
      *
-     * @param array $userIds Array of user IDs.
+     * @param array $ids Array of user IDs.
      * @param int $perPage Items per page.
      * @return LengthAwarePaginator
      */

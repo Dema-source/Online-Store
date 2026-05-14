@@ -8,6 +8,8 @@
   use App\Http\Controllers\Api\CategoryController;
   use App\Http\Controllers\Api\CategoryProductController;
   use App\Http\Controllers\Api\CartItemController;
+  use App\Http\Controllers\Api\OrderController;
+  use App\Http\Controllers\Api\PaymentController;
   use App\Http\Controllers\Api\ProductController;
   use App\Http\Controllers\Api\ProductImageController;
   use Illuminate\Support\Facades\Route;
@@ -117,3 +119,28 @@
   Route::get('cart-items/get-total/{cart_id}', [CartItemController::class, 'getCartTotal']);
   Route::get('cart-items/get-count/{cart_id}', [CartItemController::class, 'getCartItemsCount']);
   Route::apiResource('cart-items', CartItemController::class);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Orders - Full Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/admin/orders
+  Route::post('orders/{orderId}/cancel', [OrderController::class, 'cancel']);
+  Route::get('orders/{orderId}/details', [OrderController::class, 'getDetails']);
+  Route::get('orders/{orderId}/exists', [OrderController::class, 'checkExists']);
+  Route::get('orders/by-ids', [OrderController::class, 'indexByIds']);
+  Route::get('orders/{orderId}/status', [OrderController::class, 'getStatus']);
+  Route::patch('orders/{orderId}/status', [OrderController::class, 'updateStatus']);
+  Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'destroy']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Payments - Full Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/admin/payments
+  Route::get('payments/by-order/{orderId}', [PaymentController::class, 'getByOrderId']);
+  Route::get('payments/{paymentId}/status', [PaymentController::class, 'getStatus']);
+  Route::patch('payments/{paymentId}/status', [PaymentController::class, 'updateStatus']);
+  Route::apiResource('payments', PaymentController::class)->only(['index', 'show', 'destroy']);

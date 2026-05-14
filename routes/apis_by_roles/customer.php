@@ -3,6 +3,9 @@
   use App\Http\Controllers\Api\CartItemController;
   use App\Http\Controllers\Api\CategoryController;
   use App\Http\Controllers\Api\CategoryProductController;
+  use App\Http\Controllers\Api\CheckoutController;
+  use App\Http\Controllers\Api\OrderController;
+  use App\Http\Controllers\Api\PaymentController;
   use App\Http\Controllers\Api\ProductController;
   use App\Http\Controllers\Api\ProductImageController;
   use App\Http\Controllers\Api\UserController;
@@ -81,7 +84,39 @@
   Route::get('cart-items/index', [CartItemController::class, 'indexForCustomer']);
   Route::put('cart-items/update', [CartItemController::class, 'updateCartItemForCustomer']);
   Route::post('cart-items/store', [CartItemController::class, 'storeForCustomer']);
+  Route::delete('cart-items/delete/{productId}', [CartItemController::class, 'removeProductFromMyCart']);
   Route::post('cart-items/clear-cart', [CartItemController::class, 'clearMyCart']);
   Route::post('cart-items/check-products', [CartItemController::class, 'checkProductsInMyCart']);
   Route::get('cart-items/get-total', [CartItemController::class, 'getMyCartTotal']);
   Route::get('cart-items/get-count', [CartItemController::class, 'getMyCartItemsCount']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Checkout - Customer Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/customer/checkout
+  Route::post('/checkout', [CheckoutController::class, 'checkout']);
+  Route::get('/checkout/status/{orderId}', [CheckoutController::class, 'getStatus']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Orders - Restrict Access - Full Access for customer related orders
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/customer/orders
+  Route::post('orders/{orderId}/cancel', [OrderController::class, 'cancel']);
+  Route::put('orders/{orderId}', [OrderController::class, 'update']);
+  Route::get('orders/{orderId}', [OrderController::class, 'show']);
+  Route::get('orders/{orderId}/status', [OrderController::class, 'getStatus']);
+  Route::get('orders/my-orders', [OrderController::class, 'indexMyOrders']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Payments - Restrict Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/customer/payments
+  Route::get('payments/my-payments', [PaymentController::class, 'indexMyPayment']);
+  Route::get('payments/{paymentId}/status', [PaymentController::class, 'getStatus']);
+  Route::get('payments/{paymentId}', [PaymentController::class, 'show']);

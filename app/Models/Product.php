@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
 
 /**
@@ -86,6 +87,16 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    /**
+     * Get all of the order_items for the Product
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function order_items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     /**
@@ -202,6 +213,88 @@ class Product extends Model
     public function scopeByIds($query, array $ids)
     {
         return $query->whereIn('id', $ids);
+    }
+
+    /**
+     * Scope to reduce stock for products by specified quantities.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Database\Eloquent\Collection $cartItems
+     * @return int Number of affected rows
+     */
+    public function scopeReduceStock($query, $cartItems)
+    {
+        $affected = 0;
+        foreach ($cartItems as $cartItem) {
+            $affected += $query->where('id', $cartItem->product_id)
+                ->decrement('stock', $cartItem->quantity);
+        }
+        return $affected;
+    }
+
+    /**
+     * Scope to reserve stock for products with availability check.
+     * Only decrements stock if sufficient quantity is available.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Database\Eloquent\Collection $cartItems
+     * @return int Number of affected rows
+     */
+    public function scopeReserveStock($query, $cartItems)
+    {
+        $affected = 0;
+        foreach ($cartItems as $cartItem) {
+            $result = static::where('id', $cartItem->product_id)
+                ->where('stock', '>=', $cartItem->quantity)
+                ->update([
+                    'stock' => DB::raw("stock - {$cartItem->quantity}"),
+                    'updated_at' => now()
+                ]);
+            $affected += $result;
+        }
+        return $affected;
+    }
+
+    /**
+     * Scope to restore stock for cancelled orders.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Database\Eloquent\Collection $cartItems
+     * @return int Number of affected rows
+     */
+    public function scopeRestoreStock($query, $cartItems)
+    {
+        $affected = 0;
+        foreach ($cartItems as $cartItem) {
+            $affected += $query->where('id', $cartItem->product_id)
+                ->increment('stock', $cartItem->quantity);
+        }
+        return $affected;
+    }
+
+    /**
+     * Scope to find a product by ID.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param int $productId
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function scopeFindProduct($query, int $productId)
+    {
+        return $query->where('id', $productId)->first();
+    }
+
+    /**
+     * Scope to get product stock by ID.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param int $productId
+     * @return int
+     */
+    public function scopeGetProductStock($query, int $productId)
+    {
+        $product = $query->where('id', $productId)->first();
+        return $product ? $product->stock : 0;
     }
 
     /**

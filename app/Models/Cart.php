@@ -30,7 +30,7 @@ class Cart extends Model
         'profile_id',
     ];
 
-        /**
+    /**
      * The "booted" method of the model.
      */
     protected static function booted()
