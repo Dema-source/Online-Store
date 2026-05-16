@@ -45,7 +45,8 @@ class AuthController extends Controller
      */
     public function registerCustomer(CustomerRegistrationRequest $request): JsonResponse
     {
-        $result = $this->authService->registerCustomer($request->validated());
+        $guestToken = $request->header('X-Guest-Token');
+        $result = $this->authService->registerCustomer($request->validated(), $guestToken);
 
         return $this->success([
             'user' => new UserResource($result['user']),

@@ -8,16 +8,18 @@
   use App\Http\Controllers\Api\CategoryController;
   use App\Http\Controllers\Api\CategoryProductController;
   use App\Http\Controllers\Api\CartItemController;
+  use App\Http\Controllers\Api\FavouriteController;
   use App\Http\Controllers\Api\OrderController;
   use App\Http\Controllers\Api\PaymentController;
   use App\Http\Controllers\Api\ProductController;
   use App\Http\Controllers\Api\ProductImageController;
+  use App\Http\Controllers\Api\ReviewController;
   use Illuminate\Support\Facades\Route;
 
   /*
-  |--------------------------------------------------------------------------
-  | Roles & Permissions - Full Access
-  |--------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| Roles & Permissions - Full Access
+|--------------------------------------------------------------------------
   */
   // API: {{baseURL}}/api/admin/roles
   Route::post('assign-permission-to-role', [RolePermissionController::class, 'assignPermissionToRole']);
@@ -144,3 +146,19 @@
   Route::get('payments/{paymentId}/status', [PaymentController::class, 'getStatus']);
   Route::patch('payments/{paymentId}/status', [PaymentController::class, 'updateStatus']);
   Route::apiResource('payments', PaymentController::class)->only(['index', 'show', 'destroy']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Favourites - Full Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/admin/favourites
+  Route::apiResource('favourites', FavouriteController::class)->only(['index', 'show', 'destroy']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Reviews - Full Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/admin/reviews
+  Route::apiResource('reviews', ReviewController::class)->only(['index', 'show', 'destroy']);

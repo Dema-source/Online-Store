@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Repositories\Interfaces\FavouriteRepositoryInterface;
+use App\Repositories\Eloquent\FavouriteRepository;
+use App\Repositories\Interfaces\ReviewRepositoryInterface;
+use App\Repositories\Eloquent\ReviewRepository;
 use App\Repositories\Interfaces\PaymentRepositoryInterface;
 use App\Repositories\Eloquent\PaymentRepository;
 use App\Repositories\Interfaces\CheckoutRepositoryInterface;
@@ -40,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(FavouriteRepositoryInterface::class, FavouriteRepository::class);
+        $this->app->bind(ReviewRepositoryInterface::class, ReviewRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         $this->app->bind(CheckoutRepositoryInterface::class, CheckoutRepository::class);
         $this->app->bind(InventoryRepositoryInterface::class, InventoryRepository::class);

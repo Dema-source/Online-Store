@@ -50,7 +50,7 @@ class Product extends Model
         'description'
     ];
 
-    
+
     /**
      * The "booted" method of the model.
      */
@@ -59,16 +59,16 @@ class Product extends Model
         static::deleting(function ($product) {
             // Delete product-category relationships
             $product->categories()->detach();
-            
+
             // Delete cart items (this will be handled by cascade delete from cart_items table)
             // But we'll also do it explicitly for safety
             $product->cart_items()->delete();
-            
+
             // Delete product images
             $product->images()->delete();
         });
     }
-    
+
     /**
      * The categories that could contain the product
      *
@@ -107,6 +107,26 @@ class Product extends Model
     public function cart_items(): HasMany
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * Get all of the reviews for the Product
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Get all of the favourires for the Product
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function favourires(): HasMany
+    {
+        return $this->hasMany(Favourite::class);
     }
 
     /**

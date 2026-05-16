@@ -71,6 +71,16 @@ class Profile extends Model
     }
 
     /**
+     * Get all of the reviews for the Profile
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
      * Scope to filter profiles by user ID.
      */
     public function scopeByUserId($query, int $userId)

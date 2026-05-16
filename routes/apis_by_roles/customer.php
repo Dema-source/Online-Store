@@ -10,6 +10,8 @@
   use App\Http\Controllers\Api\ProductImageController;
   use App\Http\Controllers\Api\UserController;
   use App\Http\Controllers\Api\ProfileController;
+  use App\Http\Controllers\Api\FavouriteController;
+  use App\Http\Controllers\Api\ReviewController;
   use Illuminate\Support\Facades\Route;
 
   /*
@@ -120,3 +122,21 @@
   Route::get('payments/my-payments', [PaymentController::class, 'indexMyPayment']);
   Route::get('payments/{paymentId}/status', [PaymentController::class, 'getStatus']);
   Route::get('payments/{paymentId}', [PaymentController::class, 'show']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Favourites - Customer Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/customer/favourites
+  Route::get('favourites/my-favourites', [FavouriteController::class, 'indexMyFavourites']);
+  Route::apiResource('favourites', FavouriteController::class)->only(['show', 'store', 'destroy']);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Reviews - Customer Access
+  |--------------------------------------------------------------------------
+  */
+  // API: {{baseURL}}/api/customer/reviews
+  Route::get('reviews/my-reviews', [ReviewController::class, 'indexMyReviews']);
+  Route::apiResource('reviews', ReviewController::class);
