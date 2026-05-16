@@ -22,10 +22,20 @@ class UpdateProfileRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole('super_administrator');
+        
+        $rules = [
             'phone' => ['sometimes', 'string', 'max:20'],
             'address' => ['sometimes', 'string', 'max:255'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
         ];
+
+        // Admins can update user_id, customers cannot
+        if ($isAdmin) {
+            $rules['user_id'] = ['sometimes', 'integer', 'exists:users,id'];
+        }
+
+        return $rules;
     }
 }

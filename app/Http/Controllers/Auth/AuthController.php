@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Auth\AdminRegistrationRequest;
-use App\Http\Requests\Api\Auth\CustomerRegistrationRequest;
-use App\Http\Requests\Api\Auth\LoginRequest;
+use App\Http\Requests\Auth\AdminRegistrationRequest;
+use App\Http\Requests\Auth\CustomerRegistrationRequest;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +26,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $request->authenticate();
-        
+
         $result = $this->authService->authenticate(
             $request->email,
             $request->password,
@@ -45,7 +45,8 @@ class AuthController extends Controller
      */
     public function registerCustomer(CustomerRegistrationRequest $request): JsonResponse
     {
-        $result = $this->authService->registerCustomer($request->validated());
+        $guestToken = $request->header('X-Guest-Token');
+        $result = $this->authService->registerCustomer($request->validated(), $guestToken);
 
         return $this->success([
             'user' => new UserResource($result['user']),
@@ -61,7 +62,7 @@ class AuthController extends Controller
     {
         // Additional check: Ensure the authenticated user is a super administrator
         $authenticatedUser = $request->user();
-        
+
         if (!$authenticatedUser->hasRole('super_administrator')) {
             return $this->error('Only super administrators can register new admin users', 403);
         }
@@ -119,7 +120,7 @@ class AuthController extends Controller
     public function sendEmailVerification(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         if ($user->hasVerifiedEmail()) {
             return $this->error('Email already verified', 422);
         }
@@ -140,7 +141,7 @@ class AuthController extends Controller
         ]);
 
         $user = $this->authService->getCurrentUser();
-        
+
         if (!hash_equals((string) $request->id, (string) $user->getKey())) {
             return $this->error('Invalid verification link', 422);
         }

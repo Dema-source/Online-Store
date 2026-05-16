@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_has_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'guest.token' => \App\Http\Middleware\EnsureGuestToken::class,
         ]);
 
         //

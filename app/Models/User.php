@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -63,6 +65,16 @@ class User extends Authenticatable
         return $this->hasOne(Profile::class);
     }
 
+    /**
+     * Get all of the favourites for the User
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function favourites(): HasMany
+    {
+        return $this->hasMany(Favourite::class);
+    }
+    
     /**
      * Get the attributes that should be cast.
      *
@@ -156,6 +168,33 @@ class User extends Authenticatable
     }
 
     /**
+     * Scope to search users by name and email fields (partial match).
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $search The search term.
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSearch($query, string $search)
+    {
+        return $query->where(function ($subQuery) use ($search) {
+            $subQuery->where('name', 'like', "%{$search}%")
+                     ->orWhere('email', 'like', "%{$search}%");
+        });
+    }
+
+    /**
+     * Scope to filter users by multiple IDs.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array $ids Array of user IDs.
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByIds($query, array $ids)
+    {
+        return $query->whereIn('id', $ids);
+    }
+
+    /**
      * Scope to filter users by multiple criteria.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
@@ -171,25 +210,22 @@ class User extends Authenticatable
     public function scopeFilter($query, array $filters)
     {
         return $query->when(isset($filters['name']), function ($q) use ($filters) {
-                    return $q->where('name', 'like', "%{$filters['name']}%");
+                    return $q->byName($filters['name']);
                 })
                 ->when(isset($filters['email']), function ($q) use ($filters) {
-                    return $q->where('email', 'like', "%{$filters['email']}%");
+                    return $q->byEmail($filters['email']);
                 })
                 ->when(isset($filters['created_on']), function ($q) use ($filters) {
-                    return $q->whereDate('created_at', $filters['created_on']);
+                    return $q->createdOn($filters['created_on']);
                 })
                 ->when(isset($filters['created_from']), function ($q) use ($filters) {
-                    return $q->where('created_at', '>=', $filters['created_from']);
+                    return $q->createdFrom($filters['created_from']);
                 })
                 ->when(isset($filters['created_to']), function ($q) use ($filters) {
-                    return $q->where('created_at', '<=', $filters['created_to']);
+                    return $q->createdTo($filters['created_to']);
                 })
                 ->when(isset($filters['search']), function ($q) use ($filters) {
-                    return $q->where(function ($subQuery) use ($filters) {
-                        $subQuery->where('name', 'like', "%{$filters['search']}%")
-                                 ->orWhere('email', 'like', "%{$filters['search']}%");
-                    });
+                    return $q->search($filters['search']);
                 });
     }
 }

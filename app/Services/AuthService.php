@@ -2,9 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\Auth\CustomerRegistered;
-use App\Events\Auth\AdminRegistered;
-use App\Events\Auth\ProfileCreated;
 use App\Models\User;
 use App\Repositories\Interfaces\AuthRepositoryInterface;
 use Illuminate\Auth\Events\Registered;
@@ -19,14 +16,19 @@ use Illuminate\Validation\ValidationException;
 class AuthService
 {
     protected AuthRepositoryInterface $authRepository;
+    protected MergeGuestService $mergeGuestService;
 
-    public function __construct(AuthRepositoryInterface $authRepository)
-    {
+    public function __construct(
+        AuthRepositoryInterface $authRepository,
+        MergeGuestService $mergeGuestService
+    ) {
         $this->authRepository = $authRepository;
+        $this->mergeGuestService = $mergeGuestService;
     }
 
     /**
-     * Authenticate user with credentials.
+     * Authenticate user with credentials using Sanctum.
+     * This method validates credentials and creates API token.
      *
      * @param string $email
      * @param string $password
@@ -38,7 +40,10 @@ class AuthService
     {
         $this->ensureIsNotRateLimited($email);
 
-        if (!Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
+        // Find user by email
+        $user = $this->authRepository->findByEmail($email);
+        
+        if (!$user || !Hash::check($password, $user->password)) {
             RateLimiter::hit($this->throttleKey($email));
 
             throw ValidationException::withMessages([
@@ -48,7 +53,7 @@ class AuthService
 
         RateLimiter::clear($this->throttleKey($email));
 
-        $user = Auth::user();
+        // Create Sanctum token
         $token = $user->createToken('api-token')->plainTextToken;
 
         return [
@@ -59,14 +64,15 @@ class AuthService
     }
 
     /**
-     * Register a new customer with profile.
+     * Register a new customer with profile and cart.
      *
      * @param array $userData
+     * @param string|null $guestToken The guest token to merge favourites from.
      * @return array
      */
-    public function registerCustomer(array $userData): array
+    public function registerCustomer(array $userData, ?string $guestToken = null): array
     {
-        return DB::transaction(function () use ($userData) {
+        return DB::transaction(function () use ($userData, $guestToken) {
             // Create user
             $user = $this->authRepository->createUser($userData, 'customer');
             
@@ -74,6 +80,12 @@ class AuthService
             if (isset($userData['profile'])) {
                 $user->profile()->create($userData['profile']);
             }
+            
+            // Create cart for customer
+            $user->profile->cart()->create();
+            
+            // Merge guest favourites to user favourites
+            $this->mergeGuestService->mergeFavourites($user->id, $guestToken);
             
             // Fire registration event
             event(new Registered($user));
