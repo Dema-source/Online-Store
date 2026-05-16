@@ -200,6 +200,17 @@ class Product extends Model
     }
 
     /**
+     * Scope to filter products that are in stock (stock > 0).
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInStock($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
+    /**
      * Scope to filter products created from date.
      */
     public function scopeCreatedFrom($query, $date)

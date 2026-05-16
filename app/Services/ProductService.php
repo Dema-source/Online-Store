@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\Interfaces\ProductRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Service layer for handling business logic related to the "ProductRepositoryInterface" repository.
@@ -28,6 +29,14 @@ class ProductService
      */
     public function getAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole('super_administrator');
+        
+        // Non-admin users can only see products with stock > 0
+        if (!$isAdmin) {
+            $filters['in_stock'] = true;
+        }
+        
         return $this->repository->getAll($filters, $perPage);
     }
 

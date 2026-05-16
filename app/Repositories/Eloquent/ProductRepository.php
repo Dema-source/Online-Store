@@ -56,6 +56,10 @@ class ProductRepository implements ProductRepositoryInterface
                         // Handle created to date filter
                         $query->createdTo($value);
                         break;
+                    case 'in_stock':
+                        // Handle in stock filter
+                        $query->inStock();
+                        break;
 
                     default:
                         // Handle individual filter scopes
@@ -140,6 +144,9 @@ class ProductRepository implements ProductRepositoryInterface
                         break;
                     case 'created_on':
                         $query->createdOn($value);
+                        break;
+                    case 'in_stock':
+                        $query->inStock();
                         break;
                     default:
                         $query->where($field, $value);
