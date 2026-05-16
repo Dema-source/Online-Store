@@ -56,22 +56,4 @@ class ProductResource extends JsonResource
             'images_count' => $this->whenCounted('images'),
         ];
     }
-
-    /**
-     * Get additional data that should be returned with the resource array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array<string, mixed>
-     */
-    public function with(Request $request): array
-    {
-        return [
-            'meta' => [
-                'key' => 'product',
-                'links' => [
-                    'self' => route('products.show', $this->id),
-                ]
-            ]
-        ];
-    }
 }

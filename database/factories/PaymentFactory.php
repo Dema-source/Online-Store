@@ -20,8 +20,8 @@ class PaymentFactory extends Factory
     {
         return [
             'order_id' => Order::factory(),
-            'payment_method' => fake()->randomElement(['credit_card', 'paypal', 'bank_transfer']),
-            'status' => fake()->randomElement(['pending', 'confirmed', 'cancelled']),
+            'payment_method' => 'cash_on_delivery',
+            'status' => fake()->randomElement(['pending', 'paid', 'cancelled']),
             'transaction_id' => fake()->uuid(),
             'amount' => fake()->randomFloat(2, 10, 1000),
             'paid_at' => fake()->dateTime(),

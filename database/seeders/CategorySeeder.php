@@ -80,5 +80,7 @@ class CategorySeeder extends Seeder
                 'name' => $category['name']
             ]);
         }
+
+        Category::factory()->count(10)->create();
     }
 }
